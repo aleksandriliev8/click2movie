@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Click2Movie — Personal Movie Library</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- AUTH SCREEN -->
+    <section id="auth-screen" class="screen">
+        <div class="auth-container">
+            <h1 class="logo">Click2Movie</h1>
+
+            <!-- Login Form -->
+            <form id="login-form" class="auth-form">
+                <h2>Login</h2>
+                <div class="form-group">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" required>
+                </div>
+                <p id="login-error" class="error-message" hidden></p>
+                <button type="submit" class="btn btn-primary">Login</button>
+                <p class="auth-switch">Don't have an account? <a href="#" id="show-register">Register</a></p>
+            </form>
+
+            <!-- Register Form -->
+            <form id="register-form" class="auth-form" hidden>
+                <h2>Register</h2>
+                <div class="form-group">
+                    <label for="register-email">Email</label>
+                    <input type="email" id="register-email" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-password">Password</label>
+                    <input type="password" id="register-password" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-confirm">Confirm Password</label>
+                    <input type="password" id="register-confirm" required>
+                </div>
+                <p id="register-error" class="error-message" hidden></p>
+                <button type="submit" class="btn btn-primary">Register</button>
+                <p class="auth-switch">Already have an account? <a href="#" id="show-login">Login</a></p>
+            </form>
+        </div>
+    </section>
+
+    <!-- MAIN APP (visible after login) -->
+    <div id="app" hidden>
+
+        <!-- Navigation -->
+        <header>
+            <nav class="navbar">
+                <a href="#" class="nav-logo">Click2Movie</a>
+                <ul class="nav-links">
+                    <li><a href="#" data-screen="catalog-screen" class="nav-link active">Catalog</a></li>
+                    <li><a href="#" data-screen="favorites-screen" class="nav-link">Favorites</a></li>
+                    <li><a href="#" data-screen="watched-screen" class="nav-link">Watched</a></li>
+                    <li><a href="#" data-screen="add-movie-screen" class="nav-link">Add Movie</a></li>
+                </ul>
+                <div class="nav-user">
+                    <span id="user-email"></span>
+                    <button id="logout-btn" class="btn btn-secondary">Logout</button>
+                </div>
+                <button id="hamburger-btn" class="hamburger" aria-label="Toggle menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </nav>
+        </header>
+
+        <main>
+
+            <!-- CATALOG SCREEN -->
+            <section id="catalog-screen" class="screen">
+                <div class="screen-header">
+                    <h2>Movie Catalog</h2>
+                    <button id="sort-btn" class="btn btn-secondary">Sort: A → Z</button>
+                </div>
+                <div id="movie-grid" class="movie-grid">
+                    <!-- Movie cards rendered by JS -->
+                </div>
+            </section>
+
+            <!-- MOVIE DETAILS SCREEN -->
+            <section id="details-screen" class="screen" hidden>
+                <button id="back-to-catalog" class="btn btn-back">← Back</button>
+                <article id="movie-details" class="movie-details">
+                    <!-- Rendered by JS -->
+                </article>
+            </section>
+
+            <!-- FAVORITES SCREEN -->
+            <section id="favorites-screen" class="screen" hidden>
+                <h2>My Favorites</h2>
+                <div id="favorites-grid" class="movie-grid">
+                    <!-- Rendered by JS -->
+                </div>
+                <p id="no-favorites" class="empty-message" hidden>No favorite movies yet. Browse the catalog to add some!</p>
+            </section>
+
+            <!-- WATCHED SCREEN -->
+            <section id="watched-screen" class="screen" hidden>
+                <h2>Watched Movies</h2>
+                <div id="watched-grid" class="movie-grid">
+                    <!-- Rendered by JS -->
+                </div>
+                <p id="no-watched" class="empty-message" hidden>No watched movies yet. Start exploring!</p>
+            </section>
+
+            <!-- ADD MOVIE SCREEN -->
+            <section id="add-movie-screen" class="screen" hidden>
+                <h2>Add a New Movie</h2>
+                <form id="add-movie-form" class="add-movie-form">
+                    <div class="form-group">
+                        <label for="movie-title">Title</label>
+                        <input type="text" id="movie-title" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="movie-duration">Duration</label>
+                        <input type="text" id="movie-duration" placeholder="e.g. 120 min" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="movie-year">Release Year</label>
+                        <input type="number" id="movie-year" min="1888" max="2030" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="movie-rating">Rating (0-10)</label>
+                        <input type="number" id="movie-rating" min="0" max="10" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="movie-director">Director</label>
+                        <input type="text" id="movie-director" required>
+                    </div>
+                    <p id="add-movie-error" class="error-message" hidden></p>
+                    <button type="submit" class="btn btn-primary">Add Movie</button>
+                </form>
+                <h3>Your Added Movies</h3>
+                <div id="custom-movies-list" class="movie-grid">
+                    <!-- Rendered by JS -->
+                </div>
+                <p id="no-custom" class="empty-message" hidden>You haven't added any movies yet.</p>
+            </section>
+
+        </main>
+
+        <footer>
+            <p>Click2Movie &copy; 2025 — Personal Movie Library</p>
+        </footer>
+
+    </div>
+
+    <script src="js/app.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/movies.js"></script>
+    <script src="js/details.js"></script>
+    <script src="js/favorites.js"></script>
+    <script src="js/watched.js"></script>
+</body>
+</html>
