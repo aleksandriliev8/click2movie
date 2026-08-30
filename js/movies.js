@@ -1,6 +1,7 @@
 "use strict";
 
 var allMovies = [];
+var seedMovies = [];
 var sortAscending = true;
 
 function loadMovies() {
@@ -9,24 +10,21 @@ function loadMovies() {
             return response.json();
         })
         .then(function (data) {
-            allMovies = data;
-            var customMovies = getUserCustomMovies();
-            allMovies = allMovies.concat(customMovies);
+            seedMovies = data;
+            return loadUserData();
+        })
+        .then(function (userData) {
+            allMovies = seedMovies.slice();
+            if (userData && userData.customMovies) {
+                allMovies = allMovies.concat(userData.customMovies);
+            }
             renderMovieGrid();
         })
         .catch(function (error) {
             console.error("Failed to load movies:", error);
+            allMovies = seedMovies.slice();
+            renderMovieGrid();
         });
-}
-
-function getUserCustomMovies() {
-    var currentUser = getCurrentUser();
-    if (!currentUser) return [];
-    var users = getUsers();
-    var user = users.find(function (u) {
-        return u.email === currentUser.email;
-    });
-    return user && user.customMovies ? user.customMovies : [];
 }
 
 function sortMovies(movies) {
@@ -139,24 +137,16 @@ document.addEventListener("DOMContentLoaded", function () {
                 isCustom: true
             };
 
-            var currentUser = getCurrentUser();
-            var users = getUsers();
-            var userIndex = users.findIndex(function (u) {
-                return u.email === currentUser.email;
+            loadUserData().then(function (userData) {
+                var customMovies = (userData && userData.customMovies) ? userData.customMovies : [];
+                customMovies.push(newMovie);
+                return saveUserData({ customMovies: customMovies });
+            }).then(function () {
+                allMovies.push(newMovie);
+                addMovieForm.reset();
+                renderMovieGrid();
+                renderCustomMovies();
             });
-
-            if (userIndex !== -1) {
-                if (!users[userIndex].customMovies) {
-                    users[userIndex].customMovies = [];
-                }
-                users[userIndex].customMovies.push(newMovie);
-                saveUsers(users);
-            }
-
-            allMovies.push(newMovie);
-            addMovieForm.reset();
-            renderMovieGrid();
-            renderCustomMovies();
         });
     }
 });
@@ -164,51 +154,48 @@ document.addEventListener("DOMContentLoaded", function () {
 function renderCustomMovies() {
     var container = document.getElementById("custom-movies-list");
     var noCustom = document.getElementById("no-custom");
-    var customMovies = getUserCustomMovies();
 
     container.innerHTML = "";
 
-    if (customMovies.length === 0) {
-        noCustom.hidden = false;
-        return;
-    }
+    loadUserData().then(function (userData) {
+        var customMovies = (userData && userData.customMovies) ? userData.customMovies : [];
 
-    noCustom.hidden = true;
+        if (customMovies.length === 0) {
+            noCustom.hidden = false;
+            return;
+        }
 
-    customMovies.forEach(function (movie) {
-        var card = createMovieCard(movie);
+        noCustom.hidden = true;
 
-        var actions = card.querySelector(".movie-card-actions");
-        var removeBtn = document.createElement("button");
-        removeBtn.className = "btn btn-danger";
-        removeBtn.textContent = "Remove";
-        removeBtn.addEventListener("click", function () {
-            removeCustomMovie(movie.id);
+        customMovies.forEach(function (movie) {
+            var card = createMovieCard(movie);
+
+            var actions = card.querySelector(".movie-card-actions");
+            var removeBtn = document.createElement("button");
+            removeBtn.className = "btn btn-danger";
+            removeBtn.textContent = "Remove";
+            removeBtn.addEventListener("click", function () {
+                removeCustomMovie(movie.id);
+            });
+            actions.appendChild(removeBtn);
+
+            container.appendChild(card);
         });
-        actions.appendChild(removeBtn);
-
-        container.appendChild(card);
     });
 }
 
 function removeCustomMovie(movieId) {
-    var currentUser = getCurrentUser();
-    var users = getUsers();
-    var userIndex = users.findIndex(function (u) {
-        return u.email === currentUser.email;
-    });
-
-    if (userIndex !== -1) {
-        users[userIndex].customMovies = users[userIndex].customMovies.filter(function (m) {
+    loadUserData().then(function (userData) {
+        var customMovies = (userData && userData.customMovies) ? userData.customMovies : [];
+        customMovies = customMovies.filter(function (m) {
             return m.id !== movieId;
         });
-        saveUsers(users);
-    }
-
-    allMovies = allMovies.filter(function (m) {
-        return m.id !== movieId;
+        return saveUserData({ customMovies: customMovies });
+    }).then(function () {
+        allMovies = allMovies.filter(function (m) {
+            return m.id !== movieId;
+        });
+        renderCustomMovies();
+        renderMovieGrid();
     });
-
-    renderCustomMovies();
-    renderMovieGrid();
 }
