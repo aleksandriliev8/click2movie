@@ -210,15 +210,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var backBtn = document.getElementById("back-to-catalog");
     if (backBtn) {
         backBtn.addEventListener("click", function () {
-            showScreen(previousScreen);
-
-            if (previousScreen === "favorites-screen") {
-                renderFavorites();
-            } else if (previousScreen === "watched-screen") {
-                renderWatched();
-            } else {
-                renderMovieGrid();
-            }
+            history.back();
         });
     }
 });

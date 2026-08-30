@@ -1,6 +1,8 @@
 "use strict";
 
-function showScreen(screenId) {
+var navigatingBack = false;
+
+function showScreen(screenId, addToHistory) {
     var screens = document.querySelectorAll("main .screen");
     screens.forEach(function (screen) {
         screen.hidden = true;
@@ -19,7 +21,12 @@ function showScreen(screenId) {
         }
     });
 
+    if (addToHistory !== false && !navigatingBack) {
+        history.pushState({ screen: screenId }, "", "#" + screenId);
+    }
+
     closeMobileMenu();
+    window.scrollTo(0, 0);
 }
 
 function showAuthScreen() {
@@ -45,6 +52,27 @@ function closeMobileMenu() {
     if (navUser) navUser.classList.remove("open");
 }
 
+function refreshScreenContent(screenId) {
+    if (screenId === "favorites-screen") {
+        renderFavorites();
+    } else if (screenId === "watched-screen") {
+        renderWatched();
+    } else if (screenId === "add-movie-screen") {
+        renderCustomMovies();
+    } else if (screenId === "catalog-screen") {
+        renderMovieGrid();
+    }
+}
+
+window.addEventListener("popstate", function (e) {
+    if (e.state && e.state.screen) {
+        navigatingBack = true;
+        showScreen(e.state.screen, false);
+        refreshScreenContent(e.state.screen);
+        navigatingBack = false;
+    }
+});
+
 document.addEventListener("DOMContentLoaded", function () {
     var navLinks = document.querySelectorAll(".nav-link");
     navLinks.forEach(function (link) {
@@ -52,16 +80,7 @@ document.addEventListener("DOMContentLoaded", function () {
             e.preventDefault();
             var screenId = this.dataset.screen;
             showScreen(screenId);
-
-            if (screenId === "favorites-screen") {
-                renderFavorites();
-            } else if (screenId === "watched-screen") {
-                renderWatched();
-            } else if (screenId === "add-movie-screen") {
-                renderCustomMovies();
-            } else if (screenId === "catalog-screen") {
-                renderMovieGrid();
-            }
+            refreshScreenContent(screenId);
         });
     });
 
