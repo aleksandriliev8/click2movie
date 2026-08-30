@@ -15,24 +15,25 @@ function showMovieDetails(movie, fromScreen) {
     var container = document.getElementById("movie-details");
     container.innerHTML = '<p class="empty-message">Loading movie details...</p>';
 
-    var detailUrl = "https://www.omdbapi.com/?t=" +
+    var omdbPromise = fetch("https://www.omdbapi.com/?t=" +
         encodeURIComponent(movie.title) +
         "&y=" + movie.year +
-        "&apikey=" + OMDB_API_KEY;
-
-    fetch(detailUrl)
+        "&apikey=" + OMDB_API_KEY)
         .then(function (response) {
             return response.json();
         })
-        .then(function (omdbData) {
-            renderDetails(movie, omdbData);
-        })
         .catch(function () {
-            renderDetails(movie, null);
+            return null;
         });
+
+    var userPromise = loadUserData();
+
+    Promise.all([omdbPromise, userPromise]).then(function (results) {
+        renderDetails(movie, results[0], results[1]);
+    });
 }
 
-function renderDetails(movie, omdbData) {
+function renderDetails(movie, omdbData, userData) {
     var container = document.getElementById("movie-details");
 
     var posterUrl = "";
@@ -49,18 +50,11 @@ function renderDetails(movie, omdbData) {
 
     var plot = omdbPlot || movie.plot || "No plot available.";
 
-    var currentUser = getCurrentUser();
-    var users = getUsers();
-    var user = users.find(function (u) {
-        return u.email === currentUser.email;
-    });
+    var favorites = (userData && userData.favorites) ? userData.favorites : [];
+    var watched = (userData && userData.watched) ? userData.watched : [];
 
-    var isFavorite = user && user.favorites && user.favorites.some(function (id) {
-        return id === movie.id;
-    });
-    var isWatched = user && user.watched && user.watched.some(function (id) {
-        return id === movie.id;
-    });
+    var isFavorite = favorites.indexOf(movie.id) !== -1;
+    var isWatched = watched.indexOf(movie.id) !== -1;
 
     var html = '<div class="movie-details-header">';
 
@@ -98,20 +92,24 @@ function renderDetails(movie, omdbData) {
 
     html += '</div></div>';
 
+    var comments = (userData && userData.comments && userData.comments["m" + movie.id]) || [];
+
     if (previousScreen === "favorites-screen") {
-        html += renderCommentSection(movie);
+        html += renderCommentSection(comments);
     }
 
     container.innerHTML = html;
 
     document.getElementById("toggle-favorite-btn").addEventListener("click", function () {
-        toggleFavorite(movie.id);
-        showMovieDetails(movie, previousScreen);
+        toggleFavorite(movie.id).then(function () {
+            showMovieDetails(movie, previousScreen);
+        });
     });
 
     document.getElementById("toggle-watched-btn").addEventListener("click", function () {
-        toggleWatched(movie.id);
-        showMovieDetails(movie, previousScreen);
+        toggleWatched(movie.id).then(function () {
+            showMovieDetails(movie, previousScreen);
+        });
     });
 
     if (previousScreen === "favorites-screen") {
@@ -119,15 +117,7 @@ function renderDetails(movie, omdbData) {
     }
 }
 
-function renderCommentSection(movie) {
-    var currentUser = getCurrentUser();
-    var users = getUsers();
-    var user = users.find(function (u) {
-        return u.email === currentUser.email;
-    });
-
-    var comments = (user && user.comments && user.comments[movie.id]) || [];
-
+function renderCommentSection(comments) {
     var html = '<div class="comment-section">';
     html += '<h3>Comments</h3>';
 
@@ -176,33 +166,29 @@ function setupCommentForm(movie) {
         if (text.length > 200) return;
 
         var currentUser = getCurrentUser();
-        var users = getUsers();
-        var userIndex = users.findIndex(function (u) {
-            return u.email === currentUser.email;
-        });
-
-        if (userIndex === -1) return;
-
-        if (!users[userIndex].comments) {
-            users[userIndex].comments = {};
-        }
-        if (!users[userIndex].comments[movie.id]) {
-            users[userIndex].comments[movie.id] = [];
-        }
 
         var now = new Date();
         var dateStr = now.getFullYear() + "-" +
             String(now.getMonth() + 1).padStart(2, "0") + "-" +
             String(now.getDate()).padStart(2, "0");
 
-        users[userIndex].comments[movie.id].push({
+        var newComment = {
             author: currentUser.email,
             date: dateStr,
             text: text
-        });
+        };
 
-        saveUsers(users);
-        showMovieDetails(movie, previousScreen);
+        loadUserData().then(function (userData) {
+            var comments = (userData && userData.comments) ? userData.comments : {};
+            var key = "m" + movie.id;
+            if (!comments[key]) {
+                comments[key] = [];
+            }
+            comments[key].push(newComment);
+            return saveUserData({ comments: comments });
+        }).then(function () {
+            showMovieDetails(movie, previousScreen);
+        });
     });
 }
 

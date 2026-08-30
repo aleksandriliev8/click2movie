@@ -1,26 +1,38 @@
 "use strict";
 
-function getUsers() {
-    var users = localStorage.getItem("click2movie_users");
-    return users ? JSON.parse(users) : [];
-}
-
-function saveUsers(users) {
-    localStorage.setItem("click2movie_users", JSON.stringify(users));
-}
-
 function getCurrentUser() {
-    var user = localStorage.getItem("click2movie_current_user");
-    return user ? JSON.parse(user) : null;
-}
-
-function setCurrentUser(user) {
-    localStorage.setItem("click2movie_current_user", JSON.stringify(user));
+    var user = auth.currentUser;
+    return user ? { email: user.email, uid: user.uid } : null;
 }
 
 function logoutUser() {
-    localStorage.removeItem("click2movie_current_user");
-    showAuthScreen();
+    auth.signOut().then(function () {
+        showAuthScreen();
+    });
+}
+
+function getUserDocRef() {
+    var user = auth.currentUser;
+    if (!user) return null;
+    return db.collection("users").doc(user.uid);
+}
+
+function loadUserData() {
+    var ref = getUserDocRef();
+    if (!ref) return Promise.resolve(null);
+
+    return ref.get().then(function (doc) {
+        if (doc.exists) {
+            return doc.data();
+        }
+        return null;
+    });
+}
+
+function saveUserData(data) {
+    var ref = getUserDocRef();
+    if (!ref) return Promise.resolve();
+    return ref.set(data, { merge: true });
 }
 
 function validateEmail(email) {
@@ -38,6 +50,27 @@ function hideError(elementId) {
     var el = document.getElementById(elementId);
     el.textContent = "";
     el.hidden = true;
+}
+
+function getFirebaseErrorMessage(errorCode) {
+    switch (errorCode) {
+        case "auth/email-already-in-use":
+            return "An account with this email already exists.";
+        case "auth/invalid-email":
+            return "Please enter a valid email address.";
+        case "auth/weak-password":
+            return "Password must be at least 6 characters.";
+        case "auth/user-not-found":
+            return "No account found with this email.";
+        case "auth/wrong-password":
+            return "Invalid email or password.";
+        case "auth/invalid-credential":
+            return "Invalid email or password.";
+        case "auth/too-many-requests":
+            return "Too many attempts. Please try again later.";
+        default:
+            return "An error occurred. Please try again.";
+    }
 }
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -77,19 +110,14 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        var users = getUsers();
-        var user = users.find(function (u) {
-            return u.email === email && u.password === password;
-        });
-
-        if (!user) {
-            showError("login-error", "Invalid email or password.");
-            return;
-        }
-
-        setCurrentUser({ email: user.email });
-        loginForm.reset();
-        showApp();
+        auth.signInWithEmailAndPassword(email, password)
+            .then(function () {
+                loginForm.reset();
+                showApp();
+            })
+            .catch(function (error) {
+                showError("login-error", getFirebaseErrorMessage(error.code));
+            });
     });
 
     registerForm.addEventListener("submit", function (e) {
@@ -115,28 +143,30 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        var users = getUsers();
-        var exists = users.some(function (u) {
-            return u.email === email;
-        });
+        auth.createUserWithEmailAndPassword(email, password)
+            .then(function (userCredential) {
+                return db.collection("users").doc(userCredential.user.uid).set({
+                    email: email,
+                    favorites: [],
+                    watched: [],
+                    customMovies: [],
+                    comments: {}
+                });
+            })
+            .then(function () {
+                registerForm.reset();
+                showApp();
+            })
+            .catch(function (error) {
+                showError("register-error", getFirebaseErrorMessage(error.code));
+            });
+    });
 
-        if (exists) {
-            showError("register-error", "An account with this email already exists.");
-            return;
+    auth.onAuthStateChanged(function (user) {
+        if (user) {
+            showApp();
+        } else {
+            showAuthScreen();
         }
-
-        users.push({
-            email: email,
-            password: password,
-            favorites: [],
-            watched: [],
-            customMovies: [],
-            comments: {}
-        });
-        saveUsers(users);
-
-        setCurrentUser({ email: email });
-        registerForm.reset();
-        showApp();
     });
 });

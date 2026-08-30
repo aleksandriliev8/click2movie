@@ -99,9 +99,4 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    if (getCurrentUser()) {
-        showApp();
-    } else {
-        showAuthScreen();
-    }
 });
